@@ -152,7 +152,7 @@ public class WebWorker implements Runnable {
             fileContents = fileContents.replace("<cs371date>", dateTag);
 
             // Replacing server tag
-            String serverTag = "Tony's super cool and working server";
+            String serverTag = "Jesus server";
             fileContents = fileContents.replace("<cs371server", serverTag);
 
             os.write(fileContents.getBytes());
