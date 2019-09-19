@@ -87,6 +87,9 @@ public static void main(String args[])
          return;
       }
    }
+    
+    
+    
    WebServer server = new WebServer();
    if (!server.start(port)) {
       System.err.println("Execution failed!");
