@@ -27,12 +27,17 @@ import java.util.Date;
 import java.text.DateFormat;
 import java.util.TimeZone;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+
+
 public class WebWorker implements Runnable
 {
 
 private Socket socket;
-
-/**
+private String URL = "";
 * Constructor: must have a valid open socket
 **/
 public WebWorker(Socket s)
@@ -53,7 +58,7 @@ public void run()
       InputStream  is = socket.getInputStream();
       OutputStream os = socket.getOutputStream();
       readHTTPRequest(is);
-      writeHTTPHeader(os,"text/html");
+      writeHTTPHeader(os,URL);
       writeContent(os);
       os.flush();
       socket.close();
@@ -77,6 +82,9 @@ private void readHTTPRequest(InputStream is)
          line = r.readLine();
          System.err.println("Request line: ("+line+")");
          if (line.length()==0) break;
+        if (line.substring(0,3).equals("GET")){
+              URL = line.substring(5).split(" ")[0];
+        }
       } catch (Exception e) {
          System.err.println("Request error: "+e);
          break;
@@ -92,10 +100,22 @@ private void readHTTPRequest(InputStream is)
 **/
 private void writeHTTPHeader(OutputStream os, String contentType) throws Exception
 {
+  //Get URL and replace all '/' with '\'
+   String tempURL = URL;
+   tempURL = tempURL.replace("/", "\\");
+   File someFile = new File(tempURL);
+    
    Date d = new Date();
    DateFormat df = DateFormat.getDateTimeInstance();
    df.setTimeZone(TimeZone.getTimeZone("GMT"));
-   os.write("HTTP/1.1 200 OK\n".getBytes());
+   
+    / Request/Error response codes
+    if(someFile.isFile()){
+        os.write("HTTP/1.1 200 OK\n".getBytes());
+    } else {
+        os.write("HTTP/1.1 404 Not Found\n".getBytes());
+    }
+    
    os.write("Date: ".getBytes());
    os.write((df.format(d)).getBytes());
    os.write("\n".getBytes());
@@ -108,6 +128,8 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
    os.write("\n\n".getBytes()); // HTTP header ends with 2 newlines
    return;
 }
+    
+
 
 /**
 * Write the data content to the client network connection. This MUST
@@ -116,9 +138,43 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
 **/
 private void writeContent(OutputStream os) throws Exception
 {
-   os.write("<html><head></head><body>\n".getBytes());
-   os.write("<h3>My web server works!</h3>\n".getBytes());
-   os.write("</body></html>\n".getBytes());
+    someURL = someURL.replace("/", "\\");
+    File someFile = new File(someURL);
+    
+    SimpleDateFormat dateFormat = new SimpleDateFormat("mm/dd/yyyy");
+    Date date = new Date();
+    
+    if(!someURL.contains("favicon.cio")){
+        
+        if(someFile.isFile()){
+            byte[] encodedFile = Files.readAllBytes(Paths.get(someURL));
+            
+            String fileContents = new String(encodedFile, StandardCharsets.UTF_8);
+            
+            // Replacing date tag
+            String dateTag = dateFormat.format(date);
+            fileContents = fileContents.replace("<cs371date>", dateTag);
+            
+            // Replacing server tag
+            String serverTag = "Tony's super cool and working server";
+            fileContents = fileContents.replace("<cs371server", serverTag);
+            
+            os.write(fileContents.getBytes());
+            
+        }
+        else{
+            
+            // Error page
+            String error404 = "error404.html";
+            
+            byte[] encodedFile = Files.readAllBytes(Paths.get(error404));
+            String fileContents = new String(encodedFile, StandardCharsets.UTF_8);
+            
+            os.write("<center> Error! Something isn't right here. </center>".getBytes());
+            os.write(fileContents.getBytes());
+        }
+    }
+} // end writeContent
 }
 
 } // end class
