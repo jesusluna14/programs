@@ -28,15 +28,19 @@ import java.text.DateFormat;
 import java.util.TimeZone;
 
 import java.nio.file.Files;
+import java.nio.file.FileSystems;
 import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+
 
 
 public class WebWorker implements Runnable {
 
    private Socket socket;
    private String URL = "";
+    private String mimeType = "";
 
    /**
    * Constructor: must have a valid open socket
@@ -57,7 +61,7 @@ public class WebWorker implements Runnable {
         InputStream  is = socket.getInputStream();
         OutputStream os = socket.getOutputStream();
         readHTTPRequest(is);
-        writeHTTPHeader(os,"text/html");
+        writeHTTPHeader(os,mimeType);
         writeContent(os, URL);
         os.flush();
         socket.close();
@@ -114,11 +118,28 @@ public class WebWorker implements Runnable {
       } else {
          os.write("HTTP/1.1 404 Not Found\n".getBytes());
       }
+       
+       InputStream type = new FileInputStream(someFile);
+       
+       //file input
+       if (tempURL.endsWith("htm"))
+           mimeType = "text/htm";
+       if (tempURL.endsWith("htm"))
+                 mimeType = "text/html";
+       if (tempURL.endsWith("gif"))
+                 mimeType = "image/gif";
+       if (tempURL.endsWith("png"))
+                 mimeType = "imaget/png";
+       if (tempURL.endsWith("jpeg"))
+                 mimeType = "image/jpeg";
+       contentType = mimeType;
+       
+       
 
       os.write("Date: ".getBytes());
       os.write((df.format(d)).getBytes());
       os.write("\n".getBytes());
-      os.write("Server: Tony's very own server\n".getBytes());
+      os.write("Server: Jesus's very own server\n".getBytes());
    
       os.write("Connection: close\n".getBytes());
       os.write("Content-Type: ".getBytes());
@@ -136,25 +157,24 @@ public class WebWorker implements Runnable {
 
       someURL = someURL.replace("/", "\\"); 
       File someFile = new File(someURL);
+       
+      Path filep = FileSystems.getDefault().getPath(someURL.trim());
 
       SimpleDateFormat dateFormat = new SimpleDateFormat("mm/dd/yyyy");
       Date date = new Date();
 
-      if(!someURL.contains("favicon.cio")){
-
+      
          if(someFile.isFile()){
-            byte[] encodedFile = Files.readAllBytes(Paths.get(someURL));
+            byte[] encodedFile = Files.readAllBytes(filep);
             
             String fileContents = new String(encodedFile, StandardCharsets.UTF_8);
 
             // Replacing date tag
-            String dateTag = dateFormat.format(date);
-            fileContents = fileContents.replace("<cs371date>", dateTag);
+             String serverTag = "Jesus Seerver";
+            fileContents = fileContents.replace("<cs371date>", serverTag);
 
-            // Replacing server tag
-            String serverTag = "Jesus server";
-            fileContents = fileContents.replace("<cs371server", serverTag);
-
+    
+             os.write(encodedFile);
             os.write(fileContents.getBytes());
 
          }
@@ -169,7 +189,7 @@ public class WebWorker implements Runnable {
             os.write("<center> Error! Something isn't right here. </center>".getBytes());
             os.write(fileContents.getBytes());
          }
-      }
+      
    } // end writeContent
 
 } // end class
